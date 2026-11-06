@@ -1,16 +1,20 @@
 # Professional Knowledge Engine
 
-Privacy-first, evidence-grounded tooling for reconstructing professional experience from conversation archives. **Early scaffold, not a working CV generator.**
+Privacy-first, evidence-grounded Python tooling to reconstruct professional experience from conversation archives. **Early-stage data infrastructure, not a CV generator or an automated competence assessor.**
 
-## Design principles
+## Implemented (v0.4b)
 
-- Raw personal conversations and profile databases stay **outside Git**.
-- Preserve original sources and evidence; never equate an assistant's statement with a user's professional claim.
-- Keep claims, limitations, uncertainties and corrections distinct.
-- Treat LLM output as untrusted proposals requiring validation.
-- Public tests use synthetic data only.
+- `init`: initialize a private SQLite database outside the repository.
+- `inspect`: inventory a ChatGPT export ZIP locally and save aggregate metadata to the private directory; no message text in the report.
+- `import`: stream `conversations.json` with `ijson` and import raw conversation nodes and messages into SQLite.
+- Preserve alternative conversation branches and the selected `current_node`; reconstruct the selected path via the Python functions `pke.branches.active_path` and `read_active_path` (not yet a CLI command).
+- Detect an identical previously imported ZIP using its SHA-256; preserve complete per-export conversation snapshots for overlapping ZIPs.
+
+**Versioning limitation:** canonical conversation/message/node records represent the first imported version. Later versions are stored in `conversation_snapshots` but are not yet projected into canonical tables or exposed through a version-selection CLI. Existing pre-v0.4b imports are not retroactively added to the snapshot table.
 
 ## Windows setup (PowerShell)
+
+From the repository directory:
 
 ```powershell
 py -3.11 -m venv .venv
@@ -21,37 +25,31 @@ python -m pke.cli init
 python -m pytest -q
 ```
 
-**Never** set `PK_DATA_DIR` inside this repository. The `init` command refuses it.
+`PK_DATA_DIR` **must be outside** the Git repository. Set it again in each new PowerShell session, unless configured securely elsewhere.
 
-## Status
+## Commands
 
-Only the initial project scaffold and a minimal SQLite schema are implemented. No conversation import, LLM processing, evidence reconciliation, job matching or CV generation is implemented yet.
-
-See [PROJECT_STATUS.md](PROJECT_STATUS.md) and [docs/architecture.md](docs/architecture.md).
-
-## Inspect a ChatGPT export locally (no network/API calls)
-
-After activating the virtual environment and setting `PK_DATA_DIR`:
+After activation and setting `PK_DATA_DIR`:
 
 ```powershell
-python -m pke.cli inspect "C:\path\to\your\chatgpt-export.zip"
+python -m pke.cli inspect "C:\path\to\chatgpt-export.zip"
+python -m pke.cli import "C:\path\to\chatgpt-export.zip"
 ```
 
-The command prints aggregate counts and saves `evaluations/archive_inventory.json` in the private data folder. It does not extract or upload conversations. **Do not publish the ZIP or private report.** For large exports, `ijson` is installed as a project dependency to avoid loading the entire conversation file into memory.
+`inspect` saves `evaluations/archive_inventory.json` under `PK_DATA_DIR`. `import` writes to `database/profile.sqlite` under `PK_DATA_DIR`. **Do not import a personal archive until a private database backup has been made and the real-export validation is complete.** Neither command uploads the archive to a service.
 
-## Publish code to GitHub
+## Privacy and evidence principles
 
-Create a public, empty repository called `professional-knowledge-engine` (do not initialize it with a README). Then, in the local project directory:
+- Never commit ZIP exports, private databases, logs containing personal data, credentials, or reports.
+- Source conversations are evidence to examine, not automatic proof of professional capability. Assistant-authored claims must not be attributed to the user.
+- Preserve provenance, uncertainty, negative evidence and corrections; LLM extraction, when introduced, must be reviewable.
+- `.gitignore` is a precaution, not a privacy guarantee. Review `git diff --cached` before publishing.
 
-```powershell
-git init
-git branch -M main
-git status --short
-git add .gitignore .env.example README.md PROJECT_STATUS.md pyproject.toml src tests docs
-git diff --cached --name-only
-git commit -m "Initial privacy-first scaffold and export inspector"
-git remote add origin https://github.com/YOUR_USERNAME/professional-knowledge-engine.git
-git push -u origin main
-```
+## Verification and limitations
 
-Replace `YOUR_USERNAME` with your GitHub username. Inspect staged files carefully before committing. Do not add private exports, databases, logs or credentials.
+- **13 tests passed** on the maintainer's Windows environment using synthetic data for v0.4b; no real personal ChatGPT export has been validated.
+- The importer streams **one conversation at a time**, not individual nodes within a conversation; unusually large single conversations can still consume substantial memory.
+- Archive size limits remain in place; attachments and multimodal data are retained as raw JSON where present, not interpreted.
+- No version-selection reader, encrypted backup, automatic migration backup, professional claim extraction, job matching or CV generation yet.
+
+See [project status](PROJECT_STATUS.md) and [technical architecture](docs/architecture.md).

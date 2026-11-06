@@ -1,33 +1,34 @@
-# Professional Knowledge Engine — status
+# Professional Knowledge Engine — project status
 
-## Implemented
-- Privacy-first Python project, SQLite storage outside Git repository.
-- Offline ZIP inventory (`inspect`) and transactional ZIP import (`import`) for small exports.
-- Raw mapping nodes, parent/children and `current_node` preserved.
-- v0.4a: deterministic selected-branch reconstruction (`pke.branches.active_path` and `read_active_path`), without changing SQLite schema.
+## Released on `main`
 
-## Verified in development environment
-- `PYTHONPATH=src python -m pytest -q`: 11 passed (including active path, alternative branch, broken links, cycles, SQLite roundtrip).
-- Synthetic ZIP import tested previously; no real personal export validated.
+- **v0.1–v0.2:** privacy-first Python scaffold, private SQLite initialization, offline export inspection.
+- **v0.3:** transactional synthetic ZIP import into SQLite; raw nodes, messages, branch relationships and selected `current_node` preserved; identical ZIP recognized by SHA-256.
+- **v0.4a:** deterministic active-path reconstruction in `pke.branches` with detection of missing nodes and cycles. Python API only.
+- **v0.4b:** incremental JSON parsing with `ijson`; complete per-export `conversation_snapshots` for overlapping conversation IDs. First imported version remains canonical.
 
-## Known limitations
-- Active path reconstruction is available as a Python function, not yet a CLI command or full conversation view.
-- Existing imported data may have invalid `current_node`/parent chains; reconstruction raises errors rather than silently guessing.
-- Reimport of a different ZIP containing the same conversation IDs still fails; versioned snapshots/provenance needed.
-- `conversations.json` is loaded into memory and limited to 100 MiB; streaming not yet implemented.
-- Attachments and multimodal content are preserved in raw JSON nodes but not interpreted.
-- No professional knowledge extraction or profile schema implemented yet.
-- No private encrypted backup configured.
+## Verification
 
-## Next
-1. Versioned import and overlapping exports, with migration and tests.
-2. Streaming/large-export support and real-export compatibility.
-3. Schema discovery from professional experience and job advertisements, without conflating requirements with personal capabilities.
+- On Windows, `python -m pytest -q`: **13 passed** after v0.4b installation.
+- Synthetic fixtures only. No real personal export, large-scale stress test, or production-grade migration validation yet.
 
-## v0.4b (incremental snapshots)
-- `ijson` streams conversations; no fixed 100 MiB JSON cap. A single enormous conversation can still consume substantial RAM.
-- `conversation_snapshots` stores complete raw conversation JSON per imported ZIP. Repeated conversation IDs across different ZIPs no longer conflict.
-- Existing canonical `conversations`, `messages`, `conversation_nodes`, and `conversation_graph` remain first-seen snapshots, to protect claim evidence and existing branch readers. New versions are preserved in `conversation_snapshots`, not yet projected into the canonical tables.
-- Legacy v0.3 imports are not retroactively copied into `conversation_snapshots`; their original canonical records remain intact.
-- Imports are transactional for source and snapshot rows. No automatic backup or encryption: back up the private SQLite database before importing real data.
-- Follow-up required: explicit version-selection reader, canonical projection strategy, per-conversation size limits, realistic large-export stress tests.
+## Important design details
+
+- ZIP files are deduplicated by archive SHA-256; a different ZIP can contain a new snapshot of an existing conversation.
+- Canonical `conversations`, `messages`, `conversation_nodes` and `conversation_graph` remain first-seen records. Later snapshots are retained but not selected by the existing branch reader.
+- Legacy v0.3 conversations are not retroactively copied to `conversation_snapshots`.
+- Import writes source/snapshot rows transactionally; schema creation occurs before the import transaction.
+- `ijson` avoids loading all conversations at once, but one exceptionally large conversation still uses memory.
+- `PK_DATA_DIR` must be outside Git. Back up `profile.sqlite` before any real import; no automatic encrypted backup.
+
+## Not implemented
+
+- Version selection and version-aware branch reading; canonical projection or reconciliation of snapshots.
+- Real-export compatibility testing, streaming stress tests, per-conversation memory limits.
+- Attachment/multimodal interpretation, professional schema discovery, claim extraction/verification, job matching and CV generation.
+
+## Next decisions and work
+
+1. Verify integrity, rollback, snapshots and migration behavior on temporary databases; test a realistic export safely.
+2. Design version-aware readers and an explicit canonical projection policy without overwriting evidence.
+3. Discover a professional knowledge schema using conversation evidence and job-posting vocabulary, keeping requirements separate from demonstrated skills.
