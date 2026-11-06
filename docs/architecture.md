@@ -1,47 +1,37 @@
-# Technical architecture — v0.4b
+# Technical architecture — v0.5b
 
-## Boundary and components
+## Trust boundary
 
-Public Git repository (`src/pke`, tests, documentation) → local CLI → configured private directory (`PK_DATA_DIR`) → SQLite. ZIP archives and SQLite must stay outside the public repository. No network/API calls are required for inventory or import.
+Public repository (Python code/tests/docs) -> local CLI -> `PK_DATA_DIR` outside repository -> private SQLite. ZIP inventory, import and manual intake are offline. No model APIs are called.
 
-- `storage.py`: validates private path and initializes SQLite tables.
-- `inspector.py`: inventories ZIP metadata using `ijson` when available; writes aggregate report under `evaluations/`.
-- `importer.py`: SHA-256 archive identification, incremental conversation parsing and SQLite persistence.
-- `branches.py`: reconstructs root-to-`current_node` path from parent pointers; rejects broken or cyclic paths.
-- `cli.py`: `init`, `inspect`, `import` commands.
+## Component flows
 
-## SQLite data model
+See [module guide](module-guide.md) for a detailed call graph, responsibilities and interfaces.
 
-- `sources`: ZIP provenance, filename, SHA-256, import timestamp.
-- `conversations`: logical conversation ID, first-import source, title, creation timestamp.
-- `messages`: canonical message ID, conversation ID, role, extracted text and timestamp.
-- `conversation_graph`: canonical selected `current_node`.
-- `conversation_nodes`: canonical raw node JSON, parent/children and optional message ID.
-- `conversation_snapshots`: `(source_id, conversation_id)` primary key and complete conversation JSON as observed in each newly imported ZIP.
-- `claims`, `claim_evidence`, `reconciliation_events`: preliminary evidence/reconciliation schema, **not an implemented extraction workflow**.
+- `cli.py` dispatches to `storage`, `inspector`, `importer` or `manual_ingest`.
+- `importer` writes sources, canonical conversations/nodes/messages and per-source snapshots.
+- `branches` reads canonical graph or supplies path reconstruction to `snapshots` and `provenance`.
+- `provenance` verifies literal substrings of a selected snapshot and retrieves source SHA-256.
+- `evidence_store` persists and rechecks those exact references.
+- `manual_ingest` stores selected JSON notes separately as unverified self-reports.
 
-`conversation_snapshots.conversation_id` references `conversations.id`; snapshots of an existing conversation do not update canonical rows. The first-import representation is therefore not necessarily the latest version. Legacy imports are not automatically backfilled into snapshots.
+## Data model
 
-## Import semantics
+- `sources`: archive identity and SHA-256.
+- `conversations`, `messages`, `conversation_graph`, `conversation_nodes`: first-import canonical representation.
+- `conversation_snapshots`: raw conversation JSON keyed by `(source_id, conversation_id)`.
+- `verified_evidence`: quote reference, text offsets, role, source hash, part hash, selected-path status.
+- `manual_intake`: exact-deduplicated note, origin label, `self_reported` provenance, `pending` review status.
+- `claims`, `claim_evidence`, `reconciliation_events`: preliminary schema only; no operational extraction pipeline.
 
-1. Compute SHA-256 for the ZIP; identical archives are treated as already imported.
-2. Check archive member size limits and locate exactly one `conversations.json`.
-3. Parse the JSON incrementally using `ijson.items(stream, 'item', use_float=True)`; each conversation, including its mapping, is materialized in memory.
-4. For new conversation IDs, insert canonical conversation, graph, nodes and messages.
-5. For every conversation in a new ZIP, insert a full JSON snapshot linked to that source.
-6. Database changes for the import are committed together or rolled back on failure. Schema creation occurs before the import transaction and is not a full migration framework.
+## Import and consistency
 
-**Caveats:** the importer does not compare snapshots at the node level or update canonical rows; no explicit version selection exists. Extremely large individual conversations may exhaust memory. No automated backup or encryption is implemented.
+ZIP SHA-256 prevents identical archive reimport. `ijson` processes one conversation at a time, but a very large conversation can still consume significant memory. New ZIP versions retain snapshots without overwriting canonical rows. Import records are transactional; schema creation precedes import transactions. Manual intake validates the whole JSON before writing and uses unique digest constraints.
 
-## Branches and evidence
+## Provenance limits
 
-A ChatGPT mapping can contain alternative branches and nodes without messages. `active_path` follows parent references from `current_node`, retaining the selected chain and rejecting missing/cyclic links. `read_active_path` currently reads the **canonical** node graph only, not later snapshots.
+`verify_quote` checks message identity, exact Unicode character offsets, role and optional active-path membership against a selected snapshot. It does not establish that a claim is true. Manual notes do not have equivalent snapshot verification and must never be presented as such.
 
-Source text is not automatically a validated professional claim. Future extraction must distinguish user statements from assistant statements, evidence from hypotheses, and job requirements from actual experience. Claim audit invariants and version-aware evidence links remain future work.
+## Safety and gaps
 
-## Security and validation
-
-- Keep private data outside Git; inspect staged changes before push.
-- ZIPs may contain sensitive content. Do not publish personal fixtures or SQLite.
-- Synthetic test suite: 13 passed on the maintainer's Windows environment after v0.4b; no real export has been validated.
-- Before a real import, create a recoverable private SQLite backup and validate rollback, integrity and compatibility on temporary copies.
+Private SQLite and exports must never be staged or pushed to Git. `pending --details` prints sensitive text. Automatic backups, encrypted storage, formal migrations, real-export testing, LLM adapters, job matching and CV generation are **not implemented**. The last reported synthetic suite result was 26 passing tests on Windows.

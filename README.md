@@ -1,20 +1,18 @@
 # Professional Knowledge Engine
 
-Privacy-first, evidence-grounded Python tooling to reconstruct professional experience from conversation archives. **Early-stage data infrastructure, not a CV generator or an automated competence assessor.**
+Privacy-first Python tooling for building an evidence-grounded professional knowledge record from ChatGPT exports and explicitly selected notes. **This is an early-stage data infrastructure project, not yet an automated competency assessor or CV generator.**
 
-## Implemented (v0.4b)
+## Implemented (through v0.5b)
 
-- `init`: initialize a private SQLite database outside the repository.
-- `inspect`: inventory a ChatGPT export ZIP locally and save aggregate metadata to the private directory; no message text in the report.
-- `import`: stream `conversations.json` with `ijson` and import raw conversation nodes and messages into SQLite.
-- Preserve alternative conversation branches and the selected `current_node`; reconstruct the selected path via the Python functions `pke.branches.active_path` and `read_active_path` (not yet a CLI command).
-- Detect an identical previously imported ZIP using its SHA-256; preserve complete per-export conversation snapshots for overlapping ZIPs.
+- Offline ZIP inventory (`inspect`) and transactional import (`import`) with per-export conversation snapshots.
+- Canonical first-import conversation graph, branch traversal and explicit snapshot version readers (Python APIs).
+- Exact quote verification against a chosen snapshot and persistent evidence references (Python APIs).
+- Incremental manual JSON intake (`import-manual`) with exact deduplication; manual entries remain self-reported and pending review.
+- Pending manual entry count (`pending`) and optional private details (`pending --details`).
 
-**Versioning limitation:** canonical conversation/message/node records represent the first imported version. Later versions are stored in `conversation_snapshots` but are not yet projected into canonical tables or exposed through a version-selection CLI. Existing pre-v0.4b imports are not retroactively added to the snapshot table.
+## Windows PowerShell setup
 
-## Windows setup (PowerShell)
-
-From the repository directory:
+From the repository root:
 
 ```powershell
 py -3.11 -m venv .venv
@@ -25,31 +23,38 @@ python -m pke.cli init
 python -m pytest -q
 ```
 
-`PK_DATA_DIR` **must be outside** the Git repository. Set it again in each new PowerShell session, unless configured securely elsewhere.
+Set `PK_DATA_DIR` again in a new terminal. It **must be outside** the public Git repository. You can run `pke` instead of `python -m pke.cli` when the installed command is available.
 
 ## Commands
-
-After activation and setting `PK_DATA_DIR`:
 
 ```powershell
 python -m pke.cli inspect "C:\path\to\chatgpt-export.zip"
 python -m pke.cli import "C:\path\to\chatgpt-export.zip"
+python -m pke.cli import-manual "C:\path\to\professional-notes.json"
+python -m pke.cli pending
+python -m pke.cli pending --details
 ```
 
-`inspect` saves `evaluations/archive_inventory.json` under `PK_DATA_DIR`. `import` writes to `database/profile.sqlite` under `PK_DATA_DIR`. **Do not import a personal archive until a private database backup has been made and the real-export validation is complete.** Neither command uploads the archive to a service.
+The manual JSON format and allowed fields are documented in [the module guide](docs/module-guide.md). Do not use a real personal export until you have a private SQLite backup and have validated compatibility on a safe copy.
 
-## Privacy and evidence principles
+## Where information goes
 
-- Never commit ZIP exports, private databases, logs containing personal data, credentials, or reports.
-- Source conversations are evidence to examine, not automatic proof of professional capability. Assistant-authored claims must not be attributed to the user.
-- Preserve provenance, uncertainty, negative evidence and corrections; LLM extraction, when introduced, must be reviewable.
-- `.gitignore` is a precaution, not a privacy guarantee. Review `git diff --cached` before publishing.
+- Private SQLite: `$env:PK_DATA_DIR\database\profile.sqlite`.
+- Private inventory report: `$env:PK_DATA_DIR\evaluations\archive_inventory.json`.
+- The public repository contains only code, tests and documentation; **never commit** exports, databases, credentials or personal notes.
 
-## Verification and limitations
+## Important distinctions
 
-- **13 tests passed** on the maintainer's Windows environment using synthetic data for v0.4b; no real personal ChatGPT export has been validated.
-- The importer streams **one conversation at a time**, not individual nodes within a conversation; unusually large single conversations can still consume substantial memory.
-- Archive size limits remain in place; attachments and multimodal data are retained as raw JSON where present, not interpreted.
-- No version-selection reader, encrypted backup, automatic migration backup, professional claim extraction, job matching or CV generation yet.
+- A quote verified against a snapshot proves **textual provenance**, not factual accuracy or professional competence.
+- A manual note is marked `self_reported` and `pending`, not cryptographically tied to ChatGPT history.
+- Identical ZIPs are skipped by SHA-256; a new ZIP may add snapshots of existing conversations. Canonical conversation rows retain their first imported version.
+- No LLM, provider integration, automatic job matching, CV generation, encrypted backups or production migration system exists yet.
 
-See [project status](PROJECT_STATUS.md) and [technical architecture](docs/architecture.md).
+## Documentation
+
+- [Module responsibilities, call graph and data contracts](docs/module-guide.md)
+- [Technical architecture](docs/architecture.md)
+- [Project status and verification](PROJECT_STATUS.md)
+- [Documentation maintenance policy](docs/documentation-policy.md)
+
+The suite had **26 passing synthetic tests** reported by the maintainer after v0.5b. Real ChatGPT exports and production workloads have not yet been validated.

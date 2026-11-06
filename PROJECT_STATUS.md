@@ -1,34 +1,36 @@
-# Professional Knowledge Engine — project status
+# Project status — v0.5b
 
-## Released on `main`
+## Implemented
 
-- **v0.1–v0.2:** privacy-first Python scaffold, private SQLite initialization, offline export inspection.
-- **v0.3:** transactional synthetic ZIP import into SQLite; raw nodes, messages, branch relationships and selected `current_node` preserved; identical ZIP recognized by SHA-256.
-- **v0.4a:** deterministic active-path reconstruction in `pke.branches` with detection of missing nodes and cycles. Python API only.
-- **v0.4b:** incremental JSON parsing with `ijson`; complete per-export `conversation_snapshots` for overlapping conversation IDs. First imported version remains canonical.
+- v0.1–v0.2: private data directory, SQLite scaffold, ZIP inspection.
+- v0.3: transactional ZIP import, source SHA-256, conversation graph.
+- v0.4a: active branch reconstruction.
+- v0.4b: streaming per-conversation parsing, versioned snapshots.
+- v0.4c: explicit snapshot readers.
+- v0.4d: literal quote verification with version/node/message/offset provenance.
+- v0.4e: persistent verified evidence references and rechecking.
+- v0.5a: incremental manual JSON intake with exact deduplication and pending status.
+- v0.5b: `import-manual`, `pending`, `pending --details` CLI commands.
 
 ## Verification
 
-- On Windows, `python -m pytest -q`: **13 passed** after v0.4b installation.
-- Synthetic fixtures only. No real personal export, large-scale stress test, or production-grade migration validation yet.
+- Maintainer reported **26 passed** after v0.5b using synthetic tests.
+- No real ChatGPT export validation, large-data performance tests, disaster recovery drill or production-grade schema migration test.
+- The documentation-only update does not add application functionality.
 
-## Important design details
+## Known limitations
 
-- ZIP files are deduplicated by archive SHA-256; a different ZIP can contain a new snapshot of an existing conversation.
-- Canonical `conversations`, `messages`, `conversation_nodes` and `conversation_graph` remain first-seen records. Later snapshots are retained but not selected by the existing branch reader.
-- Legacy v0.3 conversations are not retroactively copied to `conversation_snapshots`.
-- Import writes source/snapshot rows transactionally; schema creation occurs before the import transaction.
-- `ijson` avoids loading all conversations at once, but one exceptionally large conversation still uses memory.
-- `PK_DATA_DIR` must be outside Git. Back up `profile.sqlite` before any real import; no automatic encrypted backup.
+- The first imported conversation version remains canonical; later versions are snapshots. Old pre-snapshot imports are not backfilled automatically.
+- One conversation is still materialized in memory during ZIP import.
+- Manual intake is self-reported and does not prove a claim or authenticate its origin label.
+- Verified textual provenance is not the same as verified professional competence.
+- No automatic private DB backup, encryption or model invocation.
+- No automated extraction, conflict reconciliation, job matching or CV generation.
 
-## Not implemented
+## Next steps
 
-- Version selection and version-aware branch reading; canonical projection or reconciliation of snapshots.
-- Real-export compatibility testing, streaming stress tests, per-conversation memory limits.
-- Attachment/multimodal interpretation, professional schema discovery, claim extraction/verification, job matching and CV generation.
+1. Validate real-export format and restore-from-backup workflow on private copies.
+2. Add incremental processing states and a documented, testable provider-neutral model contract.
+3. Evaluate extraction accuracy and human review before storing professional claims.
 
-## Next decisions and work
-
-1. Verify integrity, rollback, snapshots and migration behavior on temporary databases; test a realistic export safely.
-2. Design version-aware readers and an explicit canonical projection policy without overwriting evidence.
-3. Discover a professional knowledge schema using conversation evidence and job-posting vocabulary, keeping requirements separate from demonstrated skills.
+See [module guide](docs/module-guide.md) and [documentation policy](docs/documentation-policy.md).
