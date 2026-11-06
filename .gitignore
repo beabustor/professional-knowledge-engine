@@ -1,0 +1,19 @@
+# Sensitive data and credentials
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.db
+*.zip
+*.key
+private/
+data/
+outputs/
+logs/
+backups/
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
