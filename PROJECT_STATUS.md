@@ -1,26 +1,22 @@
-# Project status
+# Professional Knowledge Engine — status
 
-## Phase 0 — Initial scaffold
+## Implemented
+- Public Python project scaffold and private SQLite directory guard.
+- Offline ZIP inventory (`inspect`).
+- Offline ZIP import (`import`) for small exports (up to 100 MiB uncompressed conversations.json), storing messages and full raw mapping nodes with parent/children and current_node.
+- Transactional import, duplicate ZIP detection via SHA-256.
 
-Implemented:
-- Python package and CLI
-- Minimal relational SQLite schema
-- Refusal to place private database inside public repository
-- Basic tests and project documentation
+## Verified in development environment
+- `PYTHONPATH=src python -m pytest -q`: 8 passed.
+- Synthetic export: 2 conversations, 8 mapping nodes, 6 messages imported.
 
-Not yet implemented:
-- GitHub repository creation / first push
-- Encrypted backup and secret scanning automation
-- Conversation import (ZIP metadata inspector implemented)
-- Claim extraction, reconciliation, profile items
-- Job matching, clarification, learning paths, CV generation
+## Limitations / next tasks
+- Importer currently loads conversations.json into memory; streaming required before real large exports.
+- Exact reimport of identical ZIP is idempotent, but overlapping conversations from different ZIPs are rejected rather than reconciled.
+- Active path reconstruction and attachment extraction are not implemented.
+- No LLM claim extraction yet; no real personal export tested.
+- Local private backup/encryption still pending.
+- Validate real-world schema variants and improve robustness before production use.
 
-## Next action
-
-Publish reviewed code to GitHub, then run the read-only ZIP inventory on a real export locally. The inspector is implemented; its execution on a real export is not yet verified.
-
-## Decisions
-
-- Public GitHub repo: code, schemas, synthetic examples only.
-- Private data: external local folder, with encrypted backups to be configured.
-- SQLite is the initial data store; LLM provider selection deferred until measured tests.
+## Privacy
+Public repository contains code and synthetic fixtures only. Keep personal exports and SQLite database outside the repository.
