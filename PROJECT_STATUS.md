@@ -23,3 +23,11 @@
 1. Versioned import and overlapping exports, with migration and tests.
 2. Streaming/large-export support and real-export compatibility.
 3. Schema discovery from professional experience and job advertisements, without conflating requirements with personal capabilities.
+
+## v0.4b (incremental snapshots)
+- `ijson` streams conversations; no fixed 100 MiB JSON cap. A single enormous conversation can still consume substantial RAM.
+- `conversation_snapshots` stores complete raw conversation JSON per imported ZIP. Repeated conversation IDs across different ZIPs no longer conflict.
+- Existing canonical `conversations`, `messages`, `conversation_nodes`, and `conversation_graph` remain first-seen snapshots, to protect claim evidence and existing branch readers. New versions are preserved in `conversation_snapshots`, not yet projected into the canonical tables.
+- Legacy v0.3 imports are not retroactively copied into `conversation_snapshots`; their original canonical records remain intact.
+- Imports are transactional for source and snapshot rows. No automatic backup or encryption: back up the private SQLite database before importing real data.
+- Follow-up required: explicit version-selection reader, canonical projection strategy, per-conversation size limits, realistic large-export stress tests.
